@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useReducer } from "react";
 import {
   isConnected,
-  getAddress,
-  getNetwork,
+  getPublicKey,
+  getNetworkDetails,
   requestAccess,
   signTransaction,
   signAuthEntry,
@@ -79,7 +79,7 @@ const initial: FreighterState = {
 export function useFreighter(): UseFreighterReturn {
   const [state, dispatch] = useReducer(reducer, initial);
 
-  // Probe on mount
+  // Probe on mount — detect whether Freighter is installed and already authorised
   useEffect(() => {
     let cancelled = false;
 
@@ -87,60 +87,73 @@ export function useFreighter(): UseFreighterReturn {
       dispatch({ type: "SET_LOADING", payload: true });
 
       try {
-        const { isConnected: connected } = await isConnected();
+        // isConnected() returns Promise<boolean> in @stellar/freighter-api@2.0.0
+        const connected = await isConnected();
         if (cancelled) return;
 
         if (!connected) {
-          // Freighter is not installed or not connected yet
           dispatch({ type: "SET_NOT_INSTALLED" });
           return;
         }
 
-        // Check if an address is already authorised
-        const addressResult = await getAddress();
-        if (cancelled) return;
-
-        if (!addressResult.error && addressResult.address) {
-          const networkResult = await getNetwork();
+        // getPublicKey() throws if the user has not yet granted access —
+        // treat that as "installed but not yet connected".
+        try {
+          const publicKey = await getPublicKey();
           if (cancelled) return;
 
-          dispatch({
-            type: "SET_CONNECTED",
-            publicKey: addressResult.address,
-            network: networkResult.network ?? "",
-            networkPassphrase: networkResult.networkPassphrase ?? "",
-          });
-        } else {
-          dispatch({ type: "SET_DISCONNECTED" });
+          if (publicKey) {
+            const networkDetails = await getNetworkDetails();
+            if (cancelled) return;
+
+            dispatch({
+              type: "SET_CONNECTED",
+              publicKey,
+              network: networkDetails.network,
+              networkPassphrase: networkDetails.networkPassphrase,
+            });
+          } else {
+            dispatch({ type: "SET_DISCONNECTED" });
+          }
+        } catch {
+          if (!cancelled) dispatch({ type: "SET_DISCONNECTED" });
         }
       } catch (err) {
         if (!cancelled) {
-          dispatch({ type: "SET_ERROR", payload: err instanceof Error ? err : new Error(String(err)) });
+          dispatch({
+            type: "SET_ERROR",
+            payload: err instanceof Error ? err : new Error(String(err)),
+          });
         }
       }
     }
 
     void probe();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const connect = useCallback(async () => {
     dispatch({ type: "SET_LOADING", payload: true });
     try {
-      await requestAccess();
-      const addressResult = await getAddress();
-      if (addressResult.error || !addressResult.address) {
-        throw new Error(addressResult.error ?? "Failed to get address");
+      // requestAccess() returns the public key string on success
+      const publicKey = await requestAccess();
+      if (!publicKey) {
+        throw new Error("Freighter access denied or no account selected");
       }
-      const networkResult = await getNetwork();
+      const networkDetails = await getNetworkDetails();
       dispatch({
         type: "SET_CONNECTED",
-        publicKey: addressResult.address,
-        network: networkResult.network ?? "",
-        networkPassphrase: networkResult.networkPassphrase ?? "",
+        publicKey,
+        network: networkDetails.network,
+        networkPassphrase: networkDetails.networkPassphrase,
       });
     } catch (err) {
-      dispatch({ type: "SET_ERROR", payload: err instanceof Error ? err : new Error(String(err)) });
+      dispatch({
+        type: "SET_ERROR",
+        payload: err instanceof Error ? err : new Error(String(err)),
+      });
     }
   }, []);
 
@@ -150,29 +163,27 @@ export function useFreighter(): UseFreighterReturn {
 
   const signTx = useCallback(
     async (xdr: string, opts?: SignTransactionOptions): Promise<string> => {
-      const result = await signTransaction(xdr, {
+      // Freighter API v2 uses accountToSign; our public type exposes it as `address`
+      return signTransaction(xdr, {
         networkPassphrase: opts?.networkPassphrase,
-        address: opts?.address,
+        accountToSign: opts?.address,
       });
-      if (result.error) throw new Error(result.error);
-      return result.signedTxXdr;
     },
-    []
+    [],
   );
 
-  const signEntry = useCallback(async (entryPreimageXdr: string): Promise<string> => {
-    const result = await signAuthEntry(entryPreimageXdr);
-    if (result.error) throw new Error(result.error);
-    return result.signedAuthEntry;
-  }, []);
+  const signEntry = useCallback(
+    async (entryPreimageXdr: string): Promise<string> => {
+      return signAuthEntry(entryPreimageXdr);
+    },
+    [],
+  );
 
   const signBlobCallback = useCallback(
     async (blob: string, opts?: { accountToSign?: string }): Promise<string> => {
-      const result = await signBlob(blob, opts);
-      if (result.error) throw new Error(result.error);
-      return result.signedBlob;
+      return signBlob(blob, opts);
     },
-    []
+    [],
   );
 
   return {

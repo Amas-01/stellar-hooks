@@ -1,7 +1,7 @@
 import { useCallback, useReducer } from "react";
 import {
   Contract,
-  SorobanRpc,
+  rpc,
   Transaction,
   TransactionBuilder,
   Networks,
@@ -35,7 +35,7 @@ type Action<TResult> =
 function createReducer<TResult>() {
   return function reducer(
     state: ContractState<TResult>,
-    action: Action<TResult>
+    action: Action<TResult>,
   ): ContractState<TResult> {
     switch (action.type) {
       case "RESET":
@@ -78,7 +78,7 @@ function createReducer<TResult>() {
  * ```
  */
 export function useSorobanContract<TResult = unknown>(
-  options: ContractCallOptions
+  options: ContractCallOptions,
 ): UseContractCallReturn<TResult> {
   const { config } = useStellarContext();
   const { publicKey, networkPassphrase, signTransaction } = useFreighter();
@@ -112,19 +112,21 @@ export function useSorobanContract<TResult = unknown>(
         // ── 1. Build ──────────────────────────────────────────────────────────
         dispatch({ type: "BUILDING" });
 
-        const server = sorobanRpcServer ?? new SorobanRpc.Server(config.sorobanRpcUrl);
+        // rpc is the correct namespace in @stellar/stellar-sdk@13 (previously SorobanRpc)
+        const server = sorobanRpcServer ?? new rpc.Server(config.sorobanRpcUrl);
         const contract = new Contract(contractId);
 
         // Convert plain JS values to ScVals if needed
         const scArgs = args.map((a) =>
-          a instanceof xdr.ScVal ? a : nativeToScVal(a)
+          a instanceof xdr.ScVal ? a : nativeToScVal(a),
         );
 
         const account = await server.getAccount(publicKey);
         const passphrase = networkPassphrase ?? config.networkPassphrase;
 
         const tx = new TransactionBuilder(account, {
-          fee,
+          // TransactionBuilder requires fee as a string
+          fee: String(fee),
           networkPassphrase: passphrase,
         })
           .addOperation(contract.call(method, ...scArgs))
@@ -134,11 +136,11 @@ export function useSorobanContract<TResult = unknown>(
         // ── 2. Simulate ───────────────────────────────────────────────────────
         const simResult = await server.simulateTransaction(tx);
 
-        if (SorobanRpc.Api.isSimulationError(simResult)) {
+        if (rpc.Api.isSimulationError(simResult)) {
           throw new Error(`Simulation failed: ${simResult.error}`);
         }
 
-        const preparedTx = SorobanRpc.assembleTransaction(tx, simResult).build();
+        const preparedTx = rpc.assembleTransaction(tx, simResult).build();
 
         // ── 3. Sign ───────────────────────────────────────────────────────────
         dispatch({ type: "SIGNING" });
@@ -149,7 +151,7 @@ export function useSorobanContract<TResult = unknown>(
 
         const signedTx = TransactionBuilder.fromXDR(
           signedXdr,
-          passphrase
+          passphrase,
         ) as Transaction;
 
         // ── 4. Submit ─────────────────────────────────────────────────────────
@@ -175,7 +177,7 @@ export function useSorobanContract<TResult = unknown>(
 
           const getResult = await server.getTransaction(txHash);
 
-          if (getResult.status === SorobanRpc.Api.GetTransactionStatus.SUCCESS) {
+          if (getResult.status === rpc.Api.GetTransactionStatus.SUCCESS) {
             // Extract the return value from the meta
             let parsed: TResult = txHash as TResult;
 
@@ -197,7 +199,7 @@ export function useSorobanContract<TResult = unknown>(
             return parsed;
           }
 
-          if (getResult.status === SorobanRpc.Api.GetTransactionStatus.FAILED) {
+          if (getResult.status === rpc.Api.GetTransactionStatus.FAILED) {
             throw new Error(`Transaction failed: ${txHash}`);
           }
         }
@@ -209,7 +211,7 @@ export function useSorobanContract<TResult = unknown>(
         return null;
       }
     },
-    [options, publicKey, networkPassphrase, signTransaction, config]
+    [options, publicKey, networkPassphrase, signTransaction, config],
   );
 
   const reset = useCallback(() => dispatch({ type: "RESET" }), []);
