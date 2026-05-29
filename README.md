@@ -228,6 +228,7 @@ All types are exported and fully documented via JSDoc.
 import type {
   StellarNetwork,
   NetworkConfig,
+  CustomNetworkConfig,
   StellarAccountData,
   StellarBalance,
   FreighterState,
