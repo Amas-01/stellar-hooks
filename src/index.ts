@@ -26,6 +26,12 @@ export type {
   UsePathPaymentReturn,
 } from "./hooks/usePathPayment";
 
+export { useSorobanTokenBalance } from "./hooks/useSorobanTokenBalance";
+export type {
+  SorobanTokenBalanceState,
+  UseSorobanTokenBalanceOptions,
+} from "./hooks/useSorobanTokenBalance";
+
 // Types
 export type {
   // Network
@@ -61,4 +67,4 @@ export type { UseStellarOffersOptions, UseStellarOffersReturn } from "./hooks/us
 export { NETWORK_CONFIGS } from "./types";
 
 // Utilities
-export { parseAccountResponse, getCache, setCache, clearCache, deleteCache } from "./utils";
+export { parseAccountResponse, getCache, setCache } from "./utils";
