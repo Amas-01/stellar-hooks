@@ -30,3 +30,9 @@ export type { UseLedgerEntryOptions } from "./useLedgerEntry";
 
 export { usePayment } from "./usePayment";
 export { usePathPayment } from "./usePathPayment";
+
+export { useSorobanTokenBalance } from "./useSorobanTokenBalance";
+export type {
+  SorobanTokenBalanceState,
+  UseSorobanTokenBalanceOptions,
+} from "./useSorobanTokenBalance";
