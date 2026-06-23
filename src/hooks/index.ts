@@ -42,3 +42,6 @@ export type {
   SorobanTokenBalanceState,
   UseSorobanTokenBalanceOptions,
 } from "./useSorobanTokenBalance";
+
+export { useOperations } from "./useOperations";
+export type { UseOperationsOptions, UseOperationsReturn } from "./useOperations";

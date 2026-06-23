@@ -68,6 +68,8 @@ export type {
 export type { StellarTomlData, UseStellarTomlReturn } from "./hooks/useStellarToml";
 export type { AssetMetadata, UseAssetMetadataReturn } from "./hooks/useAssetMetadata";
 export type { UseStellarOffersOptions, UseStellarOffersReturn } from "./hooks/useStellarOffers";
+export { useOperations } from "./hooks/useOperations";
+export type { UseOperationsOptions, UseOperationsReturn } from "./hooks/useOperations";
 
 // Network presets (useful for custom configs)
 export { NETWORK_CONFIGS } from "./types";
