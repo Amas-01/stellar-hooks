@@ -42,3 +42,9 @@ export type {
   SorobanTokenBalanceState,
   UseSorobanTokenBalanceOptions,
 } from "./useSorobanTokenBalance";
+
+export { useCreateAccount } from "./useCreateAccount";
+export type { UseCreateAccountOptions, UseCreateAccountReturn } from "./useCreateAccount";
+
+export { useAssets } from "./useAssets";
+export type { UseAssetsOptions, UseAssetsReturn } from "./useAssets";
