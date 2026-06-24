@@ -32,6 +32,16 @@ export type {
   UsePathPaymentReturn,
 } from "./hooks/usePathPayment";
 
+export { useTrade } from "./hooks/useTrade";
+export type {
+  TradeAsset,
+  PlaceOfferParams,
+  ModifyOfferParams,
+  CancelOfferParams,
+  UseTradeOptions,
+  UseTradeReturn,
+} from "./hooks/useTrade";
+
 export { useSorobanTokenBalance } from "./hooks/useSorobanTokenBalance";
 export { useWalletConnect } from "./hooks/useWalletConnect";
 export type {
